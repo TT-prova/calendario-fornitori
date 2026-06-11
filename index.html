@@ -182,11 +182,12 @@ function render(){
         const ev=document.createElement("div");
         ev.className="event "+(x.stato || "Atteso");
         ev.onclick=()=>editItem(x.id);
-        ev.innerHTML = `
-          <b>${escapeHtml(x.fornitore || "Fornitore")}</b>
-          <small>${escapeHtml(x.ordine || "")} ${x.quantita ? " - "+escapeHtml(x.quantita) : ""}</small><br>
-          <small>${escapeHtml(x.stato || "")} - ${escapeHtml(x.priorita || "")}</small>
-        `;
+       ev.innerHTML = `
+  <b>${escapeHtml(x.fornitore || "Fornitore")}</b>
+  <small>${escapeHtml(x.ordine || "")} ${x.quantita ? " - "+escapeHtml(x.quantita) : ""}</small><br>
+  <small>${escapeHtml(x.stato || "")} - ${escapeHtml(x.priorita || "")}</small>
+${x.pdf ? `<br><a href="${x.pdf}" target="_blank">📄 Apri PDF</a>` : ""}
+`;
         cell.appendChild(ev);
       });
 
