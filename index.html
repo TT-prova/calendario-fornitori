@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calendario Fornitori</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--line:#d9dee5;--txt:#1f2937;--muted:#6b7280;--brand:#2563eb;--green:#16a34a;--yellow:#ca8a04;--red:#dc2626;--blue:#2563eb}
+*{box-sizing:border-box}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--txt)}
+.top{display:flex;justify-content:space-between;align-items:center;background:#111827;color:white;padding:14px 18px;gap:10px;flex-wrap:wrap}
+.top h1{font-size:22px;margin:0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{border:1px solid var(--line);background:white;color:var(--txt);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+.btn.primary,button.primary{background:var(--brand);border-color:var(--brand);color:white}
+button.danger{background:#fee2e2;color:#991b1b}
+.toolbar{display:flex;justify-content:center;align-items:center;gap:10px;background:white;border-bottom:1px solid var(--line);padding:12px;flex-wrap:wrap}
+#monthTitle{font-weight:700;font-size:20px;min-width:220px;text-align:center}
+.legend{display:flex;gap:12px;justify-content:center;align-items:center;background:white;padding:10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.leg{display:flex;gap:6px;align-items:center;font-size:14px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.green{background:var(--green)}.yellow{background:var(--yellow)}.red{background:var(--red)}.blue{background:var(--blue)}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);margin:14px;border:1px solid var(--line)}
+.day,.head{background:white;min-height:115px;padding:8px}
+.head{min-height:auto;text-align:center;font-weight:700;background:#e5e7eb}
+.num{font-weight:700;color:#374151;margin-bottom:6px}
+.today{outline:3px solid var(--brand);outline-offset:-3px}
+.event{border-left:5px solid var(--yellow);background:#f9fafb;border-radius:8px;padding:6px;margin:5px 0;font-size:13px;cursor:pointer;box-shadow:0 1px 3px #0001}
+.event.Arrivato{border-left-color:var(--green)}
+.event.Atteso{border-left-color:var(--yellow)}
+.event.Ritardo{border-left-color:var(--red)}
+.event.Confermato{border-left-color:var(--blue)}
+.event b{display:block;font-size:13px}
+.event small{color:var(--muted)}
+.modalBg{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;z-index:10}
+.modal{background:white;border-radius:16px;padding:18px;width:min(720px,95vw);max-height:92vh;overflow:auto;box-shadow:0 20px 60px #0005}
+.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+label{font-weight:700;font-size:14px}
+input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:9px;font-size:15px}
+textarea{min-height:70px}
+.full{grid-column:1/-1}
+.modalActions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}
+.footerNote{text-align:center;color:var(--muted);font-size:12px;padding:10px}
+@media(max-width:800px){.calendar{grid-template-columns:1fr}.head{display:none}.day{min-height:auto}.formgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>📦 Calendario Fornitori Tecnotelai</h1>
+  <div class="actions">
+    <button onclick="exportCSV()">CSV</button>
+    <button onclick="window.print()">Stampa</button>
+    <button class="primary" onclick="openModal()">+ Nuovo arrivo</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button onclick="changeMonth(-1)">← Prec</button>
+  <div id="monthTitle"></div>
+  <button onclick="changeMonth(1)">Succ →</button>
+  <button onclick="goToday()">Oggi</button>
+</div>
+
+<div class="legend">
+  <span class="leg"><span class="dot yellow"></span>Atteso</span>
+  <span class="leg"><span class="dot blue"></span>Confermato</span>
+  <span class="leg"><span class="dot green"></span>Arrivato</span>
+  <span class="leg"><span class="dot red"></span>Ritardo</span>
+</div>
+
+<div class="calendar" id="calendar"></div>
+
+<div class="footerNote">
+  Nota: i dati vengono salvati nel browser di questo PC. Per uso condiviso stabile servirà collegamento a SharePoint, Excel o database.
+</div>
+
+<div class="modalBg" id="modalBg">
+  <div class="modal">
+    <h2 id="modalTitle">Nuovo arrivo fornitore</h2>
+
+    <input type="hidden" id="id">
+
+    <div class="formgrid">
+      <div class="field">
+        <label>Data arrivo</label>
+        <input type="date" id="data">
+      </div>
+
+      <div class="field">
+        <label>Fornitore</label>
+        <input id="fornitore" placeholder="Nome fornitore">
+      </div>
+
+      <div class="field">
+        <label>Ordine acquisto</label>
+        <input id="ordine" placeholder="PO / ordine BC">
+      </div>
+
+      <div class="field">
+        <label>DDT</label>
+        <input id="ddt" placeholder="Numero DDT">
+      </div>
+
+      <div class="field full">
+        <label>Materiale</label>
+        <input id="materiale" placeholder="Descrizione materiale">
+      </div>
+
+      <div class="field">
+        <label>Quantità</label>
+        <input id="quantita" placeholder="Es. 10 pallet">
+      </div>
+
+      <div class="field">
+        <label>Trasportatore</label>
+        <input id="trasportatore" placeholder="Corriere / mezzo">
+      </div>
+
+      <div class="field">
+        <label>Tipo</label>
+        <select id="tipo">
+          <option>Consegna fornitore</option>
+          <option>Ritiro nostro</option>
+          <option>Corriere</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Stato</label>
+        <select id="stato">
+          <option>Atteso</option>
+          <option>Confermato</option>
+          <option>Arrivato</option>
+          <option>Ritardo</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Priorità</label>
+        <select id="priorita">
+          <option>Media</option>
+          <option>Alta</option>
+          <option>Bassa</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Link PDF</label>
+        <input id="pdf" placeholder="Link conferma ordine / DDT">
+      </div>
+
+      <div class="field full">
+        <label>Note</label>
+        <textarea id="note" placeholder="Note libere"></textarea>
+      </div>
+    </div>
+
+    <div class="modalActions">
+      <button class="danger" onclick="deleteItem()" id="deleteBtn">Elimina</button>
+      <button onclick="closeModal()">Annulla</button>
+      <button class="primary" onclick="saveItem()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let current = new Date();
+let items = JSON.parse(localStorage.getItem("calendarioFornitori") || "[]");
+
+const giorni = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
+const mesi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+
+function saveStorage(){
+  localStorage.setItem("calendarioFornitori", JSON.stringify(items));
+}
+
+function render(){
+  const cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+  giorni.forEach(g=>{
+    const h=document.createElement("div");
+    h.className="head";
+    h.textContent=g;
+    cal.appendChild(h);
+  });
+
+  const y=current.getFullYear();
+  const m=current.getMonth();
+  document.getElementById("monthTitle").textContent = mesi[m]+" "+y;
+
+  const first = new Date(y,m,1);
+  let start = first.getDay();
+  start = start === 0 ? 6 : start - 1;
+
+  const days = new Date(y,m+1,0).getDate();
+
+  for(let i=0;i<start;i++){
+    const d=document.createElement("div");
+    d.className="day";
+    cal.appendChild(d);
+  }
+
+  for(let day=1; day<=days; day++){
+    const cell=document.createElement("div");
+    cell.className="day";
+
+    const today=new Date();
+    if(day===today.getDate() && m===today.getMonth() && y===today.getFullYear()){
+      cell.classList.add("today");
+    }
+
+    const num=document.createElement("div");
+    num.className="num";
+    num.textContent=day;
+    cell.appendChild(num);
+
+    const dateStr = y+"-"+String(m+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+
+    items.filter(x=>x.data===dateStr).forEach(x=>{
+      const ev=document.createElement("div");
+      ev.className="event "+x.stato;
+      ev.onclick=()=>editItem(x.id);
+      ev.innerHTML = `
+        <b>${escapeHtml(x.fornitore || "Fornitore")}</b>
+        <small>${escapeHtml(x.ordine || "")} ${x.quantita ? " - "+escapeHtml(x.quantita) : ""}</small><br>
+        <small>${escapeHtml(x.stato || "")} - ${escapeHtml(x.priorita || "")}</small>
+      `;
+      cell.appendChild(ev);
+    });
+
+    cell.ondblclick=()=>openModal(dateStr);
+    cal.appendChild(cell);
+  }
+}
+
+function openModal(dateStr){
+  document.getElementById("modalTitle").textContent="Nuovo arrivo fornitore";
+  document.getElementById("deleteBtn").style.display="none";
+  ["id","fornitore","ordine","ddt","materiale","quantita","trasportatore","pdf","note"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("data").value=dateStr || new Date().toISOString().slice(0,10);
+  document.getElementById("tipo").value="Consegna fornitore";
+  document.getElementById("stato").value="Atteso";
+  document.getElementById("priorita").value="Media";
+  document.getElementById("modalBg").style.display="flex";
+}
+
+function closeModal(){
+  document.getElementById("modalBg").style.display="none";
+}
+
+function saveItem(){
+  const obj = {
+    id: document.getElementById("id").value || Date.now().toString(),
+    data: document.getElementById("data").value,
+    fornitore: document.getElementById("fornitore").value,
+    ordine: document.getElementById("ordine").value,
+    ddt: document.getElementById("ddt").value,
+    materiale: document.getElementById("materiale").value,
+    quantita: document.getElementById("quantita").value,
+    trasportatore: document.getElementById("trasportatore").value,
+    tipo: document.getElementById("tipo").value,
+    stato: document.getElementById("stato").value,
+    priorita: document.getElementById("priorita").value,
+    pdf: document.getElementById("pdf").value,
+    note: document.getElementById("note").value
+  };
+
+  if(!obj.data || !obj.fornitore){
+    alert("Inserisci almeno Data arrivo e Fornitore.");
+    return;
+  }
+
+  const idx = items.findIndex(x=>x.id===obj.id);
+  if(idx>=0) items[idx]=obj;
+  else items.push(obj);
+
+  saveStorage();
+  closeModal();
+  render();
+}
+
+function editItem(id){
+  const x = items.find(i=>i.id===id);
+  if(!x) return;
+
+  document.getElementById("modalTitle").textContent="Modifica arrivo fornitore";
+  document.getElementById("deleteBtn").style.display="inline-block";
+
+  Object.keys(x).forEach(k=>{
+    if(document.getElementById(k)) document.getElementById(k).value=x[k] || "";
+  });
+
+  document.getElementById("modalBg").style.display="flex";
+}
+
+function deleteItem(){
+  const id=document.getElementById("id").value;
+  if(!id) return;
+  if(confirm("Vuoi eliminare questo arrivo?")){
+    items = items.filter(x=>x.id!==id);
+    saveStorage();
+    closeModal();
+    render();
+  }
+}
+
+function changeMonth(n){
+  current.setMonth(current.getMonth()+n);
+  render();
+}
+
+function goToday(){
+  current = new Date();
+  render();
+}
+
+function exportCSV(){
+  const header=["Data","Fornitore","Ordine","DDT","Materiale","Quantità","Trasportatore","Tipo","Stato","Priorità","PDF","Note"];
+  const rows=items.map(x=>[
+    x.data,x.fornitore,x.ordine,x.ddt,x.materiale,x.quantita,x.trasportatore,x.tipo,x.stato,x.priorita,x.pdf,x.note
+  ]);
+
+  const csv=[header,...rows].map(r=>r.map(v=>`"${String(v||"").replaceAll('"','""')}"`).join(";")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="calendario_fornitori.csv";
+  a.click();
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m]));
+}
+
+render();
+</script>
+
+</body>
+</html>
