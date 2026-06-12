@@ -186,7 +186,7 @@ function render(){
   <b>${escapeHtml(x.fornitore || "Fornitore")}</b>
   <small>${escapeHtml(x.ordine || "")} ${x.quantita ? " - "+escapeHtml(x.quantita) : ""}</small><br>
   <small>${escapeHtml(x.stato || "")} - ${escapeHtml(x.priorita || "")}</small>
-${x.pdf ? `<br><a href="${x.pdf}" target="_blank">📄 Apri PDF</a>` : ""}
+${x.pdf ? `<br><a href="${x.pdf}" target="_blank" onclick="event.stopPropagation()">📄 Apri PDF</a>` : ""}
 `;
         cell.appendChild(ev);
       });
